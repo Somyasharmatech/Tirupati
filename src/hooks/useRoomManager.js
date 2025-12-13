@@ -1,130 +1,219 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 
 const generateRooms = () => {
     const rooms = [];
+    const floors = [
+        { name: 'Ground Floor', prefix: 'G', start: 1, end: 4 },
+        { name: '1st Floor', prefix: '10', start: 1, end: 8 },
+        { name: '2nd Floor', prefix: '20', start: 1, end: 8 }
+    ];
 
-    // Ground Floor: G01-G04 (4 rooms)
-    for (let i = 1; i <= 4; i++) {
-        const num = `G0${i}`;
-        rooms.push({
-            id: num,
-            number: num,
-            floor: 'Ground Floor',
-            status: 'available',
-            guestName: '',
-            price: '',
-            checkInTime: null
-        });
-    }
+    floors.forEach(floor => {
+        for (let i = floor.start; i <= floor.end; i++) {
+            const num = floor.prefix === '10' || floor.prefix === '20'
+                ? `${floor.prefix}${i}`
+                : `${floor.prefix}0${i}`;
 
-    // 1st Floor: 101-108 (8 rooms)
-    for (let i = 1; i <= 8; i++) {
-        const num = `10${i}`;
-        rooms.push({
-            id: num,
-            number: num,
-            floor: '1st Floor',
-            status: 'available',
-            guestName: '',
-            price: '',
-            checkInTime: null
-        });
-    }
-
-    // 2nd Floor: 201-208 (8 rooms)
-    for (let i = 1; i <= 8; i++) {
-        const num = `20${i}`;
-        rooms.push({
-            id: num,
-            number: num,
-            floor: '2nd Floor',
-            status: 'available',
-            guestName: '',
-            price: '',
-            checkInTime: null
-        });
-    }
+            rooms.push({
+                id: num,
+                number: num,
+                floor: floor.name,
+                status: 'available',
+                guest_name: '',
+                price: 0,
+                check_in_time: null
+            });
+        }
+    });
 
     return rooms;
 };
 
 export const useRoomManager = () => {
-    const [rooms, setRooms] = useState(() => {
-        const saved = localStorage.getItem('tirupati_rooms');
-        const initial = generateRooms();
+    const [rooms, setRooms] = useState(generateRooms());
+    const [history, setHistory] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                // Check if the saved data matches the new structure (e.g. has G01)
-                // This ensures we migrate from the old structure (101-106) automatically
-                // but keep data for the new structure once established.
-                const hasNewStructure = parsed.some(r => r.id === 'G01');
+    // Initial Fetch and Subscription
+    useEffect(() => {
+        fetchRooms();
+        fetchHistory();
 
-                if (hasNewStructure && parsed.length === initial.length) {
-                    return parsed;
+        // Real-time subscription for rooms updates
+        const channel = supabase
+            .channel('room-updates')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, (payload) => {
+                if (payload.new) {
+                    setRooms(currentRooms =>
+                        currentRooms.map(room =>
+                            room.id === payload.new.id
+                                ? { ...room, ...mapDbToClient(payload.new) }
+                                : room
+                        )
+                    );
                 }
-            } catch (e) {
-                console.error("Failed to parse saved rooms:", e);
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
+    const mapDbToClient = (dbRoom) => ({
+        id: dbRoom.id,
+        number: dbRoom.number,
+        floor: dbRoom.floor,
+        status: dbRoom.status,
+        guestName: dbRoom.guest_name || '',
+        price: dbRoom.price || '',
+        checkInTime: dbRoom.check_in_time
+    });
+
+    const fetchRooms = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('rooms')
+                .select('*')
+                .order('id');
+
+            if (error) throw error;
+
+            if (data && data.length > 0) {
+                setRooms(data.map(mapDbToClient));
+            } else {
+                // Initial seed if DB is empty
+                const initialRooms = generateRooms().map(r => ({
+                    id: r.id,
+                    number: r.number,
+                    floor: r.floor,
+                    status: 'available'
+                }));
+                await supabase.from('rooms').insert(initialRooms);
+                // State is already initialRooms by default
             }
+        } catch (error) {
+            console.error('Error fetching rooms:', error);
+        } finally {
+            setLoading(false);
         }
-        return initial;
-    });
-
-    const [history, setHistory] = useState(() => {
-        const saved = localStorage.getItem('tirupati_history');
-        return saved ? JSON.parse(saved) : [];
-    });
-
-    useEffect(() => {
-        localStorage.setItem('tirupati_rooms', JSON.stringify(rooms));
-    }, [rooms]);
-
-    useEffect(() => {
-        localStorage.setItem('tirupati_history', JSON.stringify(history));
-    }, [history]);
-
-    const checkIn = (roomId, guestName, price) => {
-        const now = new Date().toISOString();
-        setRooms(prevRooms => prevRooms.map(room => {
-            if (room.id === roomId) {
-                return {
-                    ...room,
-                    status: 'occupied',
-                    guestName,
-                    price: Number(price),
-                    checkInTime: now
-                };
-            }
-            return room;
-        }));
     };
 
-    const checkOut = (roomId) => {
+    const fetchHistory = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('history')
+                .select('*')
+                .order('check_out_time', { ascending: false });
+
+            if (error) throw error;
+
+            if (data) {
+                setHistory(data.map(h => ({
+                    id: h.id,
+                    roomNumber: h.room_number,
+                    guestName: h.guest_name,
+                    price: h.price,
+                    checkInTime: h.check_in_time,
+                    checkOutTime: h.check_out_time
+                })));
+            }
+        } catch (error) {
+            console.error('Error fetching history:', error);
+        }
+    };
+
+    const checkIn = async (roomId, guestName, price) => {
         const now = new Date().toISOString();
-        setRooms(prevRooms => prevRooms.map(room => {
-            if (room.id === roomId) {
-                // Add to history
-                const record = {
-                    id: Date.now(), // simple unique id
+
+        // Optimistic update
+        setRooms(prev => prev.map(r => r.id === roomId ? {
+            ...r,
+            status: 'occupied',
+            guestName,
+            price,
+            checkInTime: now
+        } : r));
+
+        try {
+            const { error } = await supabase
+                .from('rooms')
+                .update({
+                    status: 'occupied',
+                    guest_name: guestName,
+                    price: Number(price),
+                    check_in_time: now
+                })
+                .eq('id', roomId);
+
+            if (error) throw error;
+        } catch (err) {
+            console.error("Check-in failed:", err);
+            fetchRooms(); // Revert on error
+        }
+    };
+
+    const checkOut = async (roomId) => {
+        const room = rooms.find(r => r.id === roomId);
+        if (!room) return;
+
+        const now = new Date().toISOString();
+
+        // Optimistic update
+        setRooms(prev => prev.map(r => r.id === roomId ? {
+            ...r,
+            status: 'available',
+            guestName: '',
+            price: '',
+            checkInTime: null
+        } : r));
+
+        try {
+            // 1. Update Room
+            const { error: roomError } = await supabase
+                .from('rooms')
+                .update({
+                    status: 'available',
+                    guest_name: null,
+                    price: null,
+                    check_in_time: null
+                })
+                .eq('id', roomId);
+
+            if (roomError) throw roomError;
+
+            // 2. Add to History
+            const { data: histData, error: histError } = await supabase
+                .from('history')
+                .insert([{
+                    room_number: room.number,
+                    guest_name: room.guestName,
+                    price: Number(room.price),
+                    check_in_time: room.checkInTime,
+                    check_out_time: now
+                }])
+                .select();
+
+            if (histError) throw histError;
+
+            // Update local history
+            if (histData) {
+                const newRecord = {
+                    id: histData[0].id,
                     roomNumber: room.number,
                     guestName: room.guestName,
                     price: room.price,
                     checkInTime: room.checkInTime,
                     checkOutTime: now
                 };
-                setHistory(prev => [record, ...prev]);
-
-                return {
-                    ...room,
-                    status: 'available',
-                    guestName: '',
-                    price: '',
-                    checkInTime: null
-                };
+                setHistory(prev => [newRecord, ...prev]);
             }
-            return room;
-        }));
+
+        } catch (err) {
+            console.error("Check-out failed:", err);
+            fetchRooms(); // Revert
+        }
     };
 
     const getRoom = (roomId) => rooms.find(r => r.id === roomId);
@@ -134,6 +223,7 @@ export const useRoomManager = () => {
         history,
         checkIn,
         checkOut,
-        getRoom
+        getRoom,
+        loading
     };
 };
