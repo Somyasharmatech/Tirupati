@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 
 function RevenueModal({ isOpen, onClose, getRevenueForDate }) {
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    // Default to local date YYYY-MM-DD
+    const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-CA'));
     const [data, setData] = useState({ total: 0, records: [] });
 
     useEffect(() => {

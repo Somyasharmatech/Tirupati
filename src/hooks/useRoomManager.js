@@ -218,10 +218,21 @@ export const useRoomManager = () => {
 
     const getRoom = (roomId) => rooms.find(r => r.id === roomId);
 
-    const getRevenueForDate = (dateString = new Date().toISOString().split('T')[0]) => {
-        // Filter active rooms that checked in on this date
+    // Helper to get YYYY-MM-DD in local time
+    const getLocalDateString = (date = new Date()) => {
+        const offset = date.getTimezoneOffset();
+        const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+        return localDate.toISOString().split('T')[0];
+    };
+
+    const getRevenueForDate = (dateString = getLocalDateString()) => {
+        // Filter active rooms that checked in on this date (Local Time)
         const activeRevenue = rooms
-            .filter(r => r.status === 'occupied' && r.checkInTime && r.checkInTime.startsWith(dateString))
+            .filter(r => {
+                if (r.status !== 'occupied' || !r.checkInTime) return false;
+                const recordDate = getLocalDateString(new Date(r.checkInTime));
+                return recordDate === dateString;
+            })
             .map(r => ({
                 source: 'Active',
                 roomNumber: r.number,
@@ -229,9 +240,13 @@ export const useRoomManager = () => {
                 price: Number(r.price) || 0
             }));
 
-        // Filter history for check-ins on this date
+        // Filter history for check-ins on this date (Local Time)
         const historyRevenue = history
-            .filter(h => h.checkInTime && h.checkInTime.startsWith(dateString))
+            .filter(h => {
+                if (!h.checkInTime) return false;
+                const recordDate = getLocalDateString(new Date(h.checkInTime));
+                return recordDate === dateString;
+            })
             .map(h => ({
                 source: 'History',
                 roomNumber: h.roomNumber,
