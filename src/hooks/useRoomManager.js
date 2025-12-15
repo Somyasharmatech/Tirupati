@@ -218,12 +218,43 @@ export const useRoomManager = () => {
 
     const getRoom = (roomId) => rooms.find(r => r.id === roomId);
 
+    const getRevenueForDate = (dateString = new Date().toISOString().split('T')[0]) => {
+        // Filter active rooms that checked in on this date
+        const activeRevenue = rooms
+            .filter(r => r.status === 'occupied' && r.checkInTime && r.checkInTime.startsWith(dateString))
+            .map(r => ({
+                source: 'Active',
+                roomNumber: r.number,
+                guestName: r.guestName,
+                price: Number(r.price) || 0
+            }));
+
+        // Filter history for check-ins on this date
+        const historyRevenue = history
+            .filter(h => h.checkInTime && h.checkInTime.startsWith(dateString))
+            .map(h => ({
+                source: 'History',
+                roomNumber: h.roomNumber,
+                guestName: h.guestName,
+                price: Number(h.price) || 0
+            }));
+
+        const allRecords = [...activeRevenue, ...historyRevenue];
+        const total = allRecords.reduce((sum, item) => sum + item.price, 0);
+
+        return {
+            total,
+            records: allRecords
+        };
+    };
+
     return {
         rooms,
         history,
         checkIn,
         checkOut,
         getRoom,
+        getRevenueForDate,
         loading
     };
 };

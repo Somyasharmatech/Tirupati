@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import RoomGrid from './components/RoomGrid';
 import HistoryModal from './components/HistoryModal';
+import RevenueModal from './components/RevenueModal';
 import { useRoomManager } from './hooks/useRoomManager';
 
 function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isRevenueOpen, setIsRevenueOpen] = useState(false);
+
   // We need to access history data. 
   // Since useRoomManager is a hook, we usually use it inside a component.
   // RoomGrid uses it internally.
@@ -29,6 +32,15 @@ function App() {
 
           <div className="flex items-center gap-4">
             <button
+              onClick={() => setIsRevenueOpen(true)}
+              className="text-sm font-medium text-emerald-600 hover:text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-md transition-colors flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Daily Report
+            </button>
+            <button
               onClick={() => setIsHistoryOpen(true)}
               className="text-sm font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1.5 rounded-md transition-colors"
             >
@@ -50,6 +62,12 @@ function App() {
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
         history={roomManager.history}
+      />
+
+      <RevenueModal
+        isOpen={isRevenueOpen}
+        onClose={() => setIsRevenueOpen(false)}
+        getRevenueForDate={roomManager.getRevenueForDate}
       />
 
       <footer className="bg-white border-t border-slate-200 mt-auto">
