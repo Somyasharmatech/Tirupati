@@ -51,6 +51,7 @@ const RoomGrid = ({ roomManager }) => {
                 room={selectedRoom}
                 onCheckIn={checkIn}
                 onCheckOut={checkOut}
+                onAddPayment={roomManager.addDailyPayment}
             />
         </div>
     );

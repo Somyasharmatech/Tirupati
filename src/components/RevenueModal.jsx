@@ -6,10 +6,13 @@ function RevenueModal({ isOpen, onClose, getRevenueForDate }) {
     const [data, setData] = useState({ total: 0, records: [] });
 
     useEffect(() => {
-        if (isOpen) {
-            const revenueData = getRevenueForDate(selectedDate);
-            setData(revenueData);
-        }
+        const fetchRevenue = async () => {
+            if (isOpen) {
+                const revenueData = await getRevenueForDate(selectedDate);
+                setData(revenueData);
+            }
+        };
+        fetchRevenue();
     }, [selectedDate, isOpen, getRevenueForDate]);
 
     const handleDateChange = (e) => {

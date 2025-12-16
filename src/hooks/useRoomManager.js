@@ -141,7 +141,8 @@ export const useRoomManager = () => {
         } : r));
 
         try {
-            const { error } = await supabase
+            // 1. Update Room
+            const { error: roomError } = await supabase
                 .from('rooms')
                 .update({
                     status: 'occupied',
@@ -152,7 +153,25 @@ export const useRoomManager = () => {
                 })
                 .eq('id', roomId);
 
-            if (error) throw error;
+            if (roomError) throw roomError;
+
+            // 2. Add Transaction (Check-in Payment)
+            const { error: transError } = await supabase
+                .from('transactions')
+                .insert([{
+                    room_number: getRoom(roomId).number,
+                    guest_name: guestName,
+                    entry_number: entryNumber,
+                    amount: Number(price),
+                    payment_date: getLocalDateString(new Date()) // Today's date
+                }]);
+
+            if (transError) {
+                console.error("Transaction insert failed during check-in:", transError);
+                // Note: We might want to alert, but for now just logging.
+                // Ideally use a DB transaction or Edge Function for atomicity.
+            }
+
         } catch (err) {
             console.error("Check-in failed:", err);
             fetchRooms(); // Revert on error
@@ -234,44 +253,54 @@ export const useRoomManager = () => {
         return localDate.toISOString().split('T')[0];
     };
 
-    const getRevenueForDate = (dateString = getLocalDateString()) => {
-        // Filter active rooms that checked in on this date (Local Time)
-        const activeRevenue = rooms
-            .filter(r => {
-                if (r.status !== 'occupied' || !r.checkInTime) return false;
-                const recordDate = getLocalDateString(new Date(r.checkInTime));
-                return recordDate === dateString;
-            })
-            .map(r => ({
-                source: 'Active',
-                roomNumber: r.number,
-                guestName: r.guestName,
-                entryNumber: r.entryNumber || '-',
-                price: Number(r.price) || 0
+    const getRevenueForDate = async (dateString = getLocalDateString()) => {
+        try {
+            const { data, error } = await supabase
+                .from('transactions')
+                .select('*')
+                .eq('payment_date', dateString);
+
+            if (error) throw error;
+
+            const records = data.map(t => ({
+                source: 'Payment', // Or Transaction
+                roomNumber: t.room_number,
+                guestName: t.guest_name,
+                entryNumber: t.entry_number || '-',
+                price: Number(t.amount)
             }));
 
-        // Filter history for check-ins on this date (Local Time)
-        const historyRevenue = history
-            .filter(h => {
-                if (!h.checkInTime) return false;
-                const recordDate = getLocalDateString(new Date(h.checkInTime));
-                return recordDate === dateString;
-            })
-            .map(h => ({
-                source: 'History',
-                roomNumber: h.roomNumber,
-                guestName: h.guestName,
-                entryNumber: h.entryNumber || '-',
-                price: Number(h.price) || 0
-            }));
+            const total = records.reduce((sum, r) => sum + r.price, 0);
 
-        const allRecords = [...activeRevenue, ...historyRevenue];
-        const total = allRecords.reduce((sum, item) => sum + item.price, 0);
+            return { total, records };
 
-        return {
-            total,
-            records: allRecords
-        };
+        } catch (error) {
+            console.error("Error fetching revenue:", error);
+            return { total: 0, records: [] };
+        }
+    };
+
+    const addDailyPayment = async (roomId, amount) => {
+        const room = rooms.find(r => r.id === roomId);
+        if (!room) return;
+
+        try {
+            const { error } = await supabase
+                .from('transactions')
+                .insert([{
+                    room_number: room.number,
+                    guest_name: room.guestName,
+                    entry_number: room.entryNumber,
+                    amount: Number(amount),
+                    payment_date: getLocalDateString(new Date())
+                }]);
+
+            if (error) throw error;
+            return true;
+        } catch (error) {
+            console.error("Error adding daily payment:", error);
+            return false;
+        }
     };
 
     return {
@@ -279,6 +308,7 @@ export const useRoomManager = () => {
         history,
         checkIn,
         checkOut,
+        addDailyPayment,
         getRoom,
         getRevenueForDate,
         loading
