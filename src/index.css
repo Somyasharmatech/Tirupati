@@ -2,8 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply bg-slate-50 text-slate-900;
+@keyframes netflix-intro {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
   }
+
+  40% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-netflix-intro {
+  animation: netflix-intro 3s cubic-bezier(0.2, 0, 0.2, 1) forwards;
 }

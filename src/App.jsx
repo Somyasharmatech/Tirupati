@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import RoomGrid from './components/RoomGrid';
 import HistoryModal from './components/HistoryModal';
 import RevenueModal from './components/RevenueModal';
+import IntroAnimation from './components/IntroAnimation';
 import { useRoomManager } from './hooks/useRoomManager';
 
 function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isRevenueOpen, setIsRevenueOpen] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
 
   // We need to access history data. 
   // Since useRoomManager is a hook, we usually use it inside a component.
@@ -19,6 +21,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans">
+      {showIntro && <IntroAnimation onComplete={() => setShowIntro(false)} />}
       <header className="bg-white shadow-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <div className="flex items-center gap-2">
