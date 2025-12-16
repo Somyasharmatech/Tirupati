@@ -3,11 +3,13 @@ import React, { useState, useEffect } from 'react';
 const ActionModal = ({ isOpen, onClose, room, onCheckIn, onCheckOut }) => {
     const [guestName, setGuestName] = useState('');
     const [price, setPrice] = useState('');
+    const [entryNumber, setEntryNumber] = useState('');
 
     useEffect(() => {
         if (isOpen) {
             setGuestName('');
             setPrice('');
+            setEntryNumber('');
         }
     }, [isOpen]);
 
@@ -20,7 +22,7 @@ const ActionModal = ({ isOpen, onClose, room, onCheckIn, onCheckOut }) => {
         if (isOccupied) {
             onCheckOut(room.id);
         } else {
-            onCheckIn(room.id, guestName, price);
+            onCheckIn(room.id, guestName, price, entryNumber);
         }
         onClose();
     };
@@ -42,6 +44,10 @@ const ActionModal = ({ isOpen, onClose, room, onCheckIn, onCheckOut }) => {
                                 <p className="font-medium text-slate-900">{room.guestName}</p>
                             </div>
                             <div className="p-3 bg-slate-50 rounded-lg">
+                                <p className="text-sm text-slate-500">Entry Number</p>
+                                <p className="font-medium text-slate-900">{room.entryNumber || '-'}</p>
+                            </div>
+                            <div className="p-3 bg-slate-50 rounded-lg">
                                 <p className="text-sm text-slate-500">Price</p>
                                 <p className="font-medium text-slate-900">₹{room.price}</p>
                             </div>
@@ -53,6 +59,16 @@ const ActionModal = ({ isOpen, onClose, room, onCheckIn, onCheckOut }) => {
                         </div>
                     ) : (
                         <>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Entry Number</label>
+                                <input
+                                    type="text"
+                                    value={entryNumber}
+                                    onChange={(e) => setEntryNumber(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                    placeholder="Enter serial/entry number"
+                                />
+                            </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Guest Name</label>
                                 <input

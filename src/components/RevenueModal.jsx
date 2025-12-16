@@ -60,6 +60,7 @@ function RevenueModal({ isOpen, onClose, getRevenueForDate }) {
                                 <thead className="bg-slate-50">
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Room</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Entry No</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Guest</th>
                                         <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Price</th>
                                         <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Source</th>
@@ -69,6 +70,7 @@ function RevenueModal({ isOpen, onClose, getRevenueForDate }) {
                                     {data.records.map((record, index) => (
                                         <tr key={index} className="hover:bg-slate-50 transition-colors">
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{record.roomNumber}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{record.entryNumber}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{record.guestName}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-green-600">₹{record.price}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-right">

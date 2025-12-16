@@ -22,6 +22,7 @@ const generateRooms = () => {
                 status: 'available',
                 guest_name: '',
                 price: 0,
+                entry_number: '',
                 check_in_time: null
             });
         }
@@ -68,6 +69,7 @@ export const useRoomManager = () => {
         status: dbRoom.status,
         guestName: dbRoom.guest_name || '',
         price: dbRoom.price || '',
+        entryNumber: dbRoom.entry_number || '',
         checkInTime: dbRoom.check_in_time
     });
 
@@ -115,6 +117,7 @@ export const useRoomManager = () => {
                     roomNumber: h.room_number,
                     guestName: h.guest_name,
                     price: h.price,
+                    entryNumber: h.entry_number,
                     checkInTime: h.check_in_time,
                     checkOutTime: h.check_out_time
                 })));
@@ -124,7 +127,7 @@ export const useRoomManager = () => {
         }
     };
 
-    const checkIn = async (roomId, guestName, price) => {
+    const checkIn = async (roomId, guestName, price, entryNumber) => {
         const now = new Date().toISOString();
 
         // Optimistic update
@@ -133,6 +136,7 @@ export const useRoomManager = () => {
             status: 'occupied',
             guestName,
             price,
+            entryNumber,
             checkInTime: now
         } : r));
 
@@ -143,6 +147,7 @@ export const useRoomManager = () => {
                     status: 'occupied',
                     guest_name: guestName,
                     price: Number(price),
+                    entry_number: entryNumber,
                     check_in_time: now
                 })
                 .eq('id', roomId);
@@ -166,6 +171,7 @@ export const useRoomManager = () => {
             status: 'available',
             guestName: '',
             price: '',
+            entryNumber: '',
             checkInTime: null
         } : r));
 
@@ -177,6 +183,7 @@ export const useRoomManager = () => {
                     status: 'available',
                     guest_name: null,
                     price: null,
+                    entry_number: null,
                     check_in_time: null
                 })
                 .eq('id', roomId);
@@ -190,6 +197,7 @@ export const useRoomManager = () => {
                     room_number: room.number,
                     guest_name: room.guestName,
                     price: Number(room.price),
+                    entry_number: room.entryNumber,
                     check_in_time: room.checkInTime,
                     check_out_time: now
                 }])
@@ -204,6 +212,7 @@ export const useRoomManager = () => {
                     roomNumber: room.number,
                     guestName: room.guestName,
                     price: room.price,
+                    entryNumber: room.entryNumber,
                     checkInTime: room.checkInTime,
                     checkOutTime: now
                 };
@@ -237,6 +246,7 @@ export const useRoomManager = () => {
                 source: 'Active',
                 roomNumber: r.number,
                 guestName: r.guestName,
+                entryNumber: r.entryNumber || '-',
                 price: Number(r.price) || 0
             }));
 
@@ -251,6 +261,7 @@ export const useRoomManager = () => {
                 source: 'History',
                 roomNumber: h.roomNumber,
                 guestName: h.guestName,
+                entryNumber: h.entryNumber || '-',
                 price: Number(h.price) || 0
             }));
 
